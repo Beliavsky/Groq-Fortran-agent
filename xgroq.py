@@ -7,11 +7,20 @@ from datetime import datetime
 import os
 
 """
-This script uses the Groq API to generate a Fortran program based on a prompt, iteratively refines it until it compiles successfully with a specified compiler, and optionally runs the resulting executable. Configuration parameters are read from 'config.txt', including the model, max attempts, prompt file, source file, whether to run the executable, whether to print the final code, whether to print compiler error messages, the compiler, and compiler options. The Groq API key is read from 'grok_key.txt'. Generated code includes comments with the prompt file name, model, generation time, and timestamp. Previous attempts are archived with numbered suffixes (e.g., foo1.f90, foo2.f90). Lines starting with a backtick (`) are commented out as they are invalid in Fortran.
+This script uses the Groq API to generate a Fortran program based on a prompt, iteratively
+refines it until it compiles successfully with a specified compiler, and optionally runs
+the resulting executable. Configuration parameters are read from 'config.txt', including
+the model, max attempts, max time for code generation, prompt file, source file, whether
+to run the executable, whether to print the final code, whether to print compiler error
+messages, the compiler, and compiler options. The Groq API key is read from 'groq_key.txt'.
+Generated code includes comments with the prompt file name, model, generation time, and
+timestamp. Previous attempts are archived with numbered suffixes (e.g., foo1.f90, foo2.f90).
+Lines starting with a backtick (`) are commented out as they are invalid in Fortran.
 
 Config file format (config.txt):
     model: <model_name> (e.g., llama-3.3-70b-versatile)
     max_attempts: <integer> (e.g., 5)
+    max_time: <seconds> (e.g., 10)
     prompt_file: <filename> (e.g., prompt.txt)
     source_file: <filename> (e.g., foo.f90)
     run_executable: <yes/no> (e.g., yes)
@@ -25,7 +34,7 @@ Requires: Specified compiler installed (e.g., gfortran)
 """
 
 # Read Groq API key from file
-with open("grok_key.txt", "r") as key_file:
+with open("groq_key.txt", "r") as key_file:
     api_key = key_file.read().strip()
 
 # Read configuration parameters from file
@@ -34,13 +43,14 @@ config = {}
 with open(config_file, "r") as f:
     for line in f:
         if not line.strip():
-            continue # skip blank lines
+            continue  # skip blank lines
         key, value = line.strip().split(": ", 1)  # Split on first ": " only
         config[key] = value
 
 # Extract parameters
 model = config["model"]
 max_attempts = int(config["max_attempts"])
+max_time = float(config["max_time"])  # Maximum cumulative generation time in seconds
 prompt_file = config["prompt_file"]
 source_file = config["source_file"]
 base_name = os.path.splitext(source_file)[0]  # Extract base name (e.g., "foo" from "foo.f90")
@@ -86,7 +96,7 @@ def generate_code(prompt):
         f"! Time generated: {timestamp}\n"
         f"! Generation time: {generation_time:.3f} seconds\n"
     )
-    return header + code
+    return header + code, generation_time
 
 def test_code(code, filename=source_file, attempt=1):
     # If not the first attempt, save a copy with suffix (e.g., foo1.f90, foo2.f90)
@@ -125,10 +135,11 @@ def test_code(code, filename=source_file, attempt=1):
 with open(prompt_file, "r") as f:
     prompt = f.read()
 
-code = generate_code(prompt)
+code, initial_gen_time = generate_code(prompt)
+total_gen_time = initial_gen_time
 attempts = 1
 
-# Iterate until compilation succeeds
+# Iterate until compilation succeeds or limits are exceeded
 while True:
     success, error = test_code(code, attempt=attempts)
     if success:
@@ -140,18 +151,29 @@ while True:
             print("\nOutput:\n", run_result.stdout)
         else:
             print("\nSkipping execution as per config (run_executable: no)")
+        print(f"Total generation time: {total_gen_time:.3f} seconds across {attempts} attempts")
         break
     else:
         if print_compiler_error_messages:
             print(f"Attempt {attempts} failed with error: {error}")
         else:
             print(f"Attempt {attempts} failed (error details suppressed)")
+        
+        # Check if we've exceeded max_time before generating more code
+        if total_gen_time >= max_time:
+            print(f"Max generation time ({max_time} seconds) exceeded after {attempts} attempts. Last code:\n", code)
+            print(f"Total generation time: {total_gen_time:.3f} seconds")
+            break
+        
         prompt = (
             f"The following Fortran code failed to compile: \n```fortran\n{code}\n```\n"
             f"Error: {error}\nPlease fix the code and return it in a ```fortran``` block."
         )
-        code = generate_code(prompt)
+        code, gen_time = generate_code(prompt)
+        total_gen_time += gen_time
         attempts += 1
+        
         if attempts > max_attempts:
             print(f"Max attempts ({max_attempts}) reached. Last code:\n", code)
+            print(f"Total generation time: {total_gen_time:.3f} seconds")
             break
