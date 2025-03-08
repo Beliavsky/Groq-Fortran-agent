@@ -5,6 +5,7 @@ import shutil
 import time
 from datetime import datetime
 import os
+import platform
 
 """
 This script uses the Groq API to generate a Fortran program based on a prompt, iteratively
@@ -29,7 +30,7 @@ Config file format (config.txt):
     compiler: <compiler_name> (e.g., gfortran)
     compiler_options: <options> (e.g., -O2 -Wall)
 
-Dependencies: groq, subprocess, re, shutil, time, datetime, os
+Dependencies: groq, subprocess, re, shutil, time, datetime, os, platform
 Requires: Specified compiler installed (e.g., gfortran)
 """
 
@@ -60,6 +61,11 @@ print_compiler_error_messages = config["print_compiler_error_messages"].lower() 
 compiler = config["compiler"]
 compiler_options = config["compiler_options"].split()  # Split options into a list (e.g., ["-O2", "-Wall"])
 
+# Determine executable extension based on platform
+is_windows = platform.system() == "Windows"
+executable_ext = ".exe" if is_windows else ""
+executable_path = f".{os.sep}{base_name}{executable_ext}"  # e.g., ".\cauchy.exe" on Windows, "./cauchy" on Unix
+
 # Initialize Groq client
 client = groq.Groq(api_key=api_key)
 
@@ -89,6 +95,9 @@ def generate_code(prompt):
             code_lines[i] = "!" + code_lines[i]
     code = "\n".join(code_lines)
 
+    # Calculate lines of code (excluding header)
+    loc = len([line for line in code.splitlines() if line.strip()])
+
     # Add comment lines to the top of the code
     header = (
         f"! Generated from prompt file: {prompt_file}\n"
@@ -96,14 +105,13 @@ def generate_code(prompt):
         f"! Time generated: {timestamp}\n"
         f"! Generation time: {generation_time:.3f} seconds\n"
     )
-    return header + code, generation_time
+    return header + code, generation_time, loc
 
 def test_code(code, filename=source_file, attempt=1):
     # If not the first attempt, save a copy with suffix (e.g., foo1.f90, foo2.f90)
     if attempt > 1:
         archive_filename = f"{base_name}{attempt-1}.f90"
         shutil.copyfile(filename, archive_filename)
-        print(f"Saved previous attempt as {archive_filename}")
     
     # Write the new code to the source file
     with open(filename, "w") as f:
@@ -135,7 +143,7 @@ def test_code(code, filename=source_file, attempt=1):
 with open(prompt_file, "r") as f:
     prompt = f.read()
 
-code, initial_gen_time = generate_code(prompt)
+code, initial_gen_time, initial_loc = generate_code(prompt)
 total_gen_time = initial_gen_time
 attempts = 1
 
@@ -143,21 +151,28 @@ attempts = 1
 while True:
     success, error = test_code(code, attempt=attempts)
     if success:
-        print("Code compiled successfully!")
+        print(f"Code compiled successfully after {attempts} attempts (generation time: {initial_gen_time if attempts == 1 else gen_time:.3f} seconds, LOC={initial_loc if attempts == 1 else loc})!")
         if print_code:
             print("Final version:\n\n", code)
         if run_executable:
-            run_result = subprocess.run(f"./{base_name}", capture_output=True, text=True, input="5\n")
-            print("\nOutput:\n", run_result.stdout)
+            if os.path.exists(executable_path):
+                print(f"Running executable: {executable_path}")
+                run_result = subprocess.run(executable_path, capture_output=True, text=True, input="5\n")
+                if run_result.returncode == 0:
+                    print("\nOutput:\n", run_result.stdout)
+                else:
+                    print(f"\nExecution failed with error: {run_result.stderr}")
+            else:
+                print(f"\nExecutable not found at {executable_path}. Ensure compilation succeeded.")
         else:
             print("\nSkipping execution as per config (run_executable: no)")
         print(f"Total generation time: {total_gen_time:.3f} seconds across {attempts} attempts")
         break
     else:
         if print_compiler_error_messages:
-            print(f"Attempt {attempts} failed with error: {error}")
+            print(f"Attempt {attempts} failed with error (generation time: {initial_gen_time if attempts == 1 else gen_time:.3f} seconds, LOC={initial_loc if attempts == 1 else loc}): {error}")
         else:
-            print(f"Attempt {attempts} failed (error details suppressed)")
+            print(f"Attempt {attempts} failed (error details suppressed, generation time: {initial_gen_time if attempts == 1 else gen_time:.3f} seconds, LOC={initial_loc if attempts == 1 else loc})")
         
         # Check if we've exceeded max_time before generating more code
         if total_gen_time >= max_time:
@@ -169,7 +184,7 @@ while True:
             f"The following Fortran code failed to compile: \n```fortran\n{code}\n```\n"
             f"Error: {error}\nPlease fix the code and return it in a ```fortran``` block."
         )
-        code, gen_time = generate_code(prompt)
+        code, gen_time, loc = generate_code(prompt)
         total_gen_time += gen_time
         attempts += 1
         
@@ -177,3 +192,7 @@ while True:
             print(f"Max attempts ({max_attempts}) reached. Last code:\n", code)
             print(f"Total generation time: {total_gen_time:.3f} seconds")
             break
+
+# Print the compilation command
+compile_command = [compiler] + compiler_options + ["-o", base_name, source_file]
+print(f"\nCompilation command: {' '.join(compile_command)}")
