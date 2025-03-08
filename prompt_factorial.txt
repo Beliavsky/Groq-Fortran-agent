@@ -1,0 +1,4 @@
+Write a Fortran program to calculate the factorial of a number provided by the user. 
+Use modern Fortran syntax (e.g., Fortran 90/95), include error handling for negative inputs, 
+and output the result. Put a ! followed by a space at the beginning of each line of 
+output that is not Fortran code. Minimize the number of comments in the code.
