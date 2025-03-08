@@ -28,7 +28,7 @@ Config file format (config.txt):
     print_code: <yes/no> (e.g., yes)
     print_compiler_error_messages: <yes/no> (e.g., yes)
     compiler: <compiler_name> (e.g., gfortran)
-    compiler_options: <options> (e.g., -O2 -Wall)
+    compiler_options: <options> (e.g., -O2 -Wall) [optional, can be empty]
 
 Dependencies: groq, subprocess, re, shutil, time, datetime, os, platform
 Requires: Specified compiler installed (e.g., gfortran)
@@ -59,7 +59,7 @@ run_executable = config["run_executable"].lower() == "yes"
 print_code = config["print_code"].lower() == "yes"
 print_compiler_error_messages = config["print_compiler_error_messages"].lower() == "yes"
 compiler = config["compiler"]
-compiler_options = config["compiler_options"].split()  # Split options into a list (e.g., ["-O2", "-Wall"])
+compiler_options = config.get("compiler_options", "").split()  # Handle empty compiler options
 
 # Determine executable extension based on platform
 is_windows = platform.system() == "Windows"
@@ -83,12 +83,36 @@ def generate_code(prompt):
     # Get current timestamp
     timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
-    # Extract code block if present
+    # Extract raw content
     content = response.choices[0].message.content
-    code_block = re.search(r"```fortran\n(.*?)\n```", content, re.DOTALL)
-    code = code_block.group(1) if code_block else content
-    code = code.replace("Certain", "! Certain") # hack to deal with LLM starting response with Certainly
-    # Comment out lines starting with a backtick
+
+    # Split content into lines
+    lines = content.splitlines()
+
+    # Find the index of the first ```fortran line
+    code_start_idx = -1
+    for i, line in enumerate(lines):
+        if line.strip() == "```fortran":
+            code_start_idx = i
+            break
+
+    # Comment out everything up to and including ```fortran
+    if code_start_idx != -1:
+        for i in range(code_start_idx + 1):
+            if not lines[i].startswith("!"):
+                lines[i] = "!" + lines[i]
+        # Extract code after ```fortran until ``` (if present)
+        code_lines = []
+        for line in lines[code_start_idx + 1:]:
+            if line.strip() == "```":
+                break
+            code_lines.append(line)
+        code = "\n".join(code_lines)
+    else:
+        # If no ```fortran found, comment everything and use it as-is
+        code = "\n".join("!" + line if not line.startswith("!") else line for line in lines)
+
+    # Comment out lines starting with a backtick within the code
     code_lines = code.splitlines()
     for i in range(len(code_lines)):
         if code_lines[i].strip().startswith("`"):
@@ -152,7 +176,7 @@ attempts = 1
 while True:
     success, error = test_code(code, attempt=attempts)
     if success:
-        print(f"Code compiled successfully after {attempts} attempts (generation time: {initial_gen_time if attempts == 1 else gen_time:.3f} seconds, LOC={initial_loc if attempts == 1 else loc})!")
+        print(f"Code compiled successfully after {attempts} {'attempt' if attempts == 1 else 'attempts'} (generation time: {initial_gen_time if attempts == 1 else gen_time:.3f} seconds, LOC={initial_loc if attempts == 1 else loc})!")
         if print_code:
             print("Final version:\n\n", code)
         if run_executable:
@@ -167,7 +191,7 @@ while True:
                 print(f"\nExecutable not found at {executable_path}. Ensure compilation succeeded.")
         else:
             print("\nSkipping execution as per config (run_executable: no)")
-        print(f"\nTotal generation time: {total_gen_time:.3f} seconds across {attempts} attempts")
+        print(f"\nTotal generation time: {total_gen_time:.3f} seconds across {attempts} {'attempt' if attempts == 1 else 'attempts'}")
         break
     else:
         if print_compiler_error_messages:
@@ -177,7 +201,9 @@ while True:
         
         # Check if we've exceeded max_time before generating more code
         if total_gen_time >= max_time:
-            print(f"Max generation time ({max_time} seconds) exceeded after {attempts} attempts. Last code:\n", code)
+            print(f"Max generation time ({max_time} seconds) exceeded after {attempts} attempts.")
+            if print_code:
+                print("Last code:\n", code)
             print(f"\nTotal generation time: {total_gen_time:.3f} seconds")
             break
         
@@ -190,7 +216,9 @@ while True:
         attempts += 1
         
         if attempts > max_attempts:
-            print(f"Max attempts ({max_attempts}) reached. Last code:\n", code)
+            print(f"Max attempts ({max_attempts}) reached.")
+            if print_code:
+                print("Last code:\n", code)
             print(f"Total generation time: {total_gen_time:.3f} seconds")
             break
 
