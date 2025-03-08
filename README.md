@@ -1,6 +1,6 @@
 # Groq-Fortran-agent
 Python script that uses Groq to create Fortran programs, iterating with compiler error messages until they compile. All attempts are saved,
-with names such as foo1.f90, foo2.f90 etc.
+with names such as foo1.f90, foo2.f90 etc. It has been tested on Windows.
 
 Running `python xgroq.py` for a configuration file
 
