@@ -87,7 +87,7 @@ def generate_code(prompt):
     content = response.choices[0].message.content
     code_block = re.search(r"```fortran\n(.*?)\n```", content, re.DOTALL)
     code = code_block.group(1) if code_block else content
-
+    code = code.replace("Certain", "! Certain") # hack to deal with LLM starting response with Certainly
     # Comment out lines starting with a backtick
     code_lines = code.splitlines()
     for i in range(len(code_lines)):
@@ -141,8 +141,9 @@ def test_code(code, filename=source_file, attempt=1):
 
 # Read initial prompt from file specified in config
 with open(prompt_file, "r") as f:
-    prompt = f.read()
-
+    prompt = f.read() + "Only output Fortran code. Do not give commentary.\n"
+    print("prompt:\n" + prompt)
+print("model: " + model + "\n")
 code, initial_gen_time, initial_loc = generate_code(prompt)
 total_gen_time = initial_gen_time
 attempts = 1
@@ -166,7 +167,7 @@ while True:
                 print(f"\nExecutable not found at {executable_path}. Ensure compilation succeeded.")
         else:
             print("\nSkipping execution as per config (run_executable: no)")
-        print(f"Total generation time: {total_gen_time:.3f} seconds across {attempts} attempts")
+        print(f"\nTotal generation time: {total_gen_time:.3f} seconds across {attempts} attempts")
         break
     else:
         if print_compiler_error_messages:
@@ -177,7 +178,7 @@ while True:
         # Check if we've exceeded max_time before generating more code
         if total_gen_time >= max_time:
             print(f"Max generation time ({max_time} seconds) exceeded after {attempts} attempts. Last code:\n", code)
-            print(f"Total generation time: {total_gen_time:.3f} seconds")
+            print(f"\nTotal generation time: {total_gen_time:.3f} seconds")
             break
         
         prompt = (
