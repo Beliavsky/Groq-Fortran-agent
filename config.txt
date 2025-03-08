@@ -1,5 +1,6 @@
 model: qwen-2.5-coder-32b
-max_attempts: 5
+max_attempts: 10
+max_time: 1000
 prompt_file: prompt_cauchy.txt
 source_file: cauchy.f90
 run_executable: yes
