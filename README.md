@@ -1,7 +1,22 @@
 # Groq-Fortran-agent
 Python script that uses Groq to create Fortran programs, iterating until they compile. 
 
-Sample output:
+Running `python xgroq.py` for a configuration file
+
+```
+model: qwen-2.5-coder-32b
+max_attempts: 10
+max_time: 1000
+prompt_file: prompt_cauchy.txt
+source_file: cauchy.f90
+run_executable: yes
+print_code: no
+print_compiler_error_messages: no
+compiler: gfortran
+compiler_options: -O0 -Wall -Werror=unused-parameter -Werror=unused-variable -Werror=unused-function -Wno-maybe-uninitialized -Wno-surprising -fbounds-check -static -g
+```
+
+sample output is
 ```
 Attempt 1 failed (error details suppressed, generation time: 3.164 seconds, LOC=67)
 Attempt 2 failed (error details suppressed, generation time: 14.672 seconds, LOC=71)
