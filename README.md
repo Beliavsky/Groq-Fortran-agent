@@ -1,5 +1,5 @@
 # Groq-Fortran-agent
-Python script that uses Groq to create Fortran programs, iterating with compiler error messages until they compile. All attempts are saved,
+Python script that uses LLMs on Groq to create Fortran programs, iterating with compiler error messages until they compile. All attempts are saved,
 with names such as foo1.f90, foo2.f90 etc. It has been tested on Windows but may run on other operating systems. It works with `ifx` as well
 as `gfortran`, with a suitable value for `compiler_options`.
 
