@@ -38,6 +38,7 @@ Requires: Specified compiler installed (e.g., gfortran)
 with open("groq_key.txt", "r") as key_file:
     api_key = key_file.read().strip()
 
+add_code_header = False
 # Read configuration parameters from file
 config_file = "config.txt"
 config = {}
@@ -75,7 +76,7 @@ def generate_code(prompt):
     response = client.chat.completions.create(
         model=model,
         messages=[{"role": "user", "content": prompt}],
-        max_tokens=1000
+        max_tokens=4096
     )
     end_time = time.time()
     generation_time = end_time - start_time
@@ -122,14 +123,17 @@ def generate_code(prompt):
     # Calculate lines of code (excluding header)
     loc = len([line for line in code.splitlines() if line.strip()])
 
-    # Add comment lines to the top of the code
-    header = (
-        f"! Generated from prompt file: {prompt_file}\n"
-        f"! Model used: {model}\n"
-        f"! Time generated: {timestamp}\n"
-        f"! Generation time: {generation_time:.3f} seconds\n"
-    )
-    return header + code, generation_time, loc
+    if add_code_header:
+        # Add comment lines to the top of the code
+        header = (
+            f"! Generated from prompt file: {prompt_file}\n"
+            f"! Model used: {model}\n"
+            f"! Time generated: {timestamp}\n"
+            f"! Generation time: {generation_time:.3f} seconds\n"
+        )
+        return header + code, generation_time, loc
+    else:
+        return code, generation_time, loc
 
 def test_code(code, filename=source_file, attempt=1):
     # If not the first attempt, save a copy with suffix (e.g., foo1.f90, foo2.f90)
