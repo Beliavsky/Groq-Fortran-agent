@@ -171,6 +171,9 @@ def test_code(code, filename=source_file, attempt=1):
 with open(prompt_file, "r") as f:
     prompt = f.read() + "Only output Fortran code. Do not give commentary.\n"
     print("prompt:\n" + prompt)
+if os.path.exists(source_file) and os.path.getsize(source_file) > 0:
+    print("use the following code as a starting point:\n")
+    print(open(source_file, "r").read(), end="\n\n")
 print("model: " + model + "\n")
 code, initial_gen_time, initial_loc = generate_code(prompt)
 total_gen_time = initial_gen_time
@@ -199,7 +202,7 @@ while True:
         break
     else:
         if print_compiler_error_messages:
-            print(f"Attempt {attempts} failed with error (generation time: {initial_gen_time if attempts == 1 else gen_time:.3f} seconds, LOC={initial_loc if attempts == 1 else loc}): {error}")
+            print(f"Attempt {attempts} failed with error (generation time: {initial_gen_time if attempts == 1 else gen_time:.3f} seconds, LOC={initial_loc if attempts == 1 else loc}):\n{error}")
         else:
             print(f"Attempt {attempts} failed (error details suppressed, generation time: {initial_gen_time if attempts == 1 else gen_time:.3f} seconds, LOC={initial_loc if attempts == 1 else loc})")
         
