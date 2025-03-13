@@ -17,7 +17,14 @@ print_compiler_error_messages: no
 compiler: gfortran
 compiler_options: -O0 -Wall -Werror=unused-parameter -Werror=unused-variable -Werror=unused-function -Wno-maybe-uninitialized -Wno-surprising -fbounds-check -static -g
 ```
-
+where the `prompt_cauchy.txt` contains
+```
+Do a Fortran simulation to find the optimal trimmed mean estimator of
+the location of the Cauchy distribution, trying trimming proportions
+of 0%, 10%, 20%, 30%, 40%, and 45%. Declare real variables as
+real(kind=dp) with dp a module constant, and put procedures in a
+module. Have the simulation use 100 samples of 1000 observations each.
+```
 sample output is
 ```
 Attempt 1 failed (error details suppressed, generation time: 3.164 seconds, LOC=67)
