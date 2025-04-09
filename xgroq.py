@@ -169,7 +169,7 @@ def test_code(code, filename=source_file, attempt=1):
 
 # Read initial prompt from file specified in config
 with open(prompt_file, "r") as f:
-    prompt = f.read() + "Only output Fortran code. Do not give commentary.\n"
+    prompt = f.read() + "\n\nOnly output Fortran code. Do not give commentary.\n"
     print("prompt:\n" + prompt)
 if os.path.exists(source_file) and os.path.getsize(source_file) > 0:
     print("use the following code as a starting point:\n")
