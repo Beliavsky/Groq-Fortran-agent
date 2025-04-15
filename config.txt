@@ -1,4 +1,4 @@
-model: qwen-2.5-coder-32b
+model: llama-3.3-70b-versatile
 max_attempts: 10
 max_time: 1000
 prompt_file: prompt_cauchy.txt
