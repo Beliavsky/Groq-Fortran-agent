@@ -1,7 +1,5 @@
 # Groq-Fortran-agent
-Python script that uses LLMs on Groq to create Fortran programs, iterating with compiler error messages until they compile. All attempts are saved,
-with names such as foo1.f90, foo2.f90 etc. It has been tested on Windows but may run on other operating systems. It works with `ifx` as well
-as `gfortran`, with a suitable value for `compiler_options`. You need to get a free Groq API key and store it in the file `groq_key.txt`. I made similar Fortran coding agents for [Google Gemini](https://github.com/Beliavsky/Gemini-Fortran-agent) and [OpenAI](https://github.com/Beliavsky/OpenAI-Fortran-agent) and Groq agents for [C++](https://github.com/Beliavsky/Groq-cpp-agent) and [Python](https://github.com/Beliavsky/Groq-Python-agent).
+Python script that uses LLMs on Groq to create Fortran programs, iterating with compiler error messages and run-time eror messages until they compile and run without error. All attempts are saved, with names such as foo1.f90, foo2.f90 etc. It has been tested on Windows but may run on other operating systems. It works with `ifx` as well as `gfortran`, with a suitable value for `compiler_options`. You need to get a free Groq API key and store it in the file `groq_key.txt`. I made similar Fortran coding agents for [Google Gemini](https://github.com/Beliavsky/Gemini-Fortran-agent) and [OpenAI](https://github.com/Beliavsky/OpenAI-Fortran-agent) and Groq agents for [C++](https://github.com/Beliavsky/Groq-cpp-agent) and [Python](https://github.com/Beliavsky/Groq-Python-agent).
 
 Running `python xgroq.py` for a configuration file
 
